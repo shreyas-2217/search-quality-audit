@@ -12,12 +12,22 @@ const DISCUSSION_DOMAINS = [
 ];
 
 const SHOPPING_DOMAINS = [
+  // US domains
   "amazon.",
   "bestbuy.com",
   "walmart.com",
   "target.com",
   "ebay.com",
   "newegg.com",
+  // Indian e-commerce domains
+  "flipkart.com",
+  "reliancedigital.in",
+  "croma.com",
+  "tatacliq.com",
+  "myntra.com",
+  "snapdeal.com",
+  "vijaysales.com",
+  "poorvika.com",
 ];
 
 const NEWS_DOMAINS = [
