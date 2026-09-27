@@ -1,101 +1,198 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import SearchForm from "@/components/SearchForm";
+import ResultCard, { SkeletonCard } from "@/components/ResultCard";
+import ComparisonChart from "@/components/ComparisonChart";
+import ExampleQueries from "@/components/ExampleQueries";
+import MethodologyNote from "@/components/MethodologyNote";
+import type { AuditResponse } from "@/lib/types";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<AuditResponse | null>(null);
+  const [activeQuery, setActiveQuery] = useState<string>("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  async function runAudit(q: string) {
+    const trimmed = q.trim();
+    if (!trimmed || loading) return;
+    setLoading(true);
+    setError(null);
+    setData(null);
+    setActiveQuery(trimmed);
+    try {
+      const res = await fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: trimmed }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(
+          (json as { error?: string }).error ??
+            "Live search failed — please try again in a moment."
+        );
+        return;
+      }
+      setData(json as AuditResponse);
+    } catch {
+      setError("Live search failed — please try again in a moment.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="mx-auto w-full max-w-3xl px-5">
+      {/* Header */}
+      <section className="py-12 text-center">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#6B7280]">
+          Pilot audit companion
+        </p>
+        <h1 className="mt-3 font-serif text-4xl leading-tight text-[#111111]">
+          Bypassing the Ad Machine
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#6B7280]">
+          A live companion to{" "}
+          <em>
+            “Bypassing the Ad Machine: An Analysis of Search Engine
+            Enshittification and User-Side Algorithmic Evasion.”
+          </em>{" "}
+          Type any query to compare a standard search against the same query
+          with “ reddit” appended — scored with the paper’s binary authenticity
+          rubric. All results are fetched live; nothing is mocked.
+        </p>
+      </section>
+
+      {/* Search */}
+      <section className="border-t border-[#E5E7EB] py-12">
+        <SearchForm
+          value={query}
+          loading={loading}
+          onChange={setQuery}
+          onSubmit={() => runAudit(query)}
+        />
+        <div className="mt-4">
+          <p className="mb-2 text-sm text-[#6B7280]">
+            Or try one of the paper’s original 4 queries:
+          </p>
+          <ExampleQueries
+            disabled={loading}
+            onSelect={(q) => {
+              setQuery(q);
+              runAudit(q);
+            }}
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+        <div className="mt-6">
+          <MethodologyNote />
+        </div>
+      </section>
+
+      {/* Loading */}
+      {loading && (
+        <section aria-live="polite" className="border-t border-[#E5E7EB] py-12">
+          <p className="mb-4 text-sm text-[#6B7280]">
+            Fetching live results for “{activeQuery}” — vanilla + evasion…
+          </p>
+          <div className="grid gap-8 md:grid-cols-2">
+            {[0, 1].map((col) => (
+              <div key={col}>
+                <div className="mb-3 h-5 w-40 rounded bg-gray-200" />
+                <div className="flex flex-col gap-3">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <SkeletonCard key={i} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Error — honest, never fake data */}
+      {!loading && error && (
+        <section aria-live="assertive" className="border-t border-[#E5E7EB] py-12">
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {error}
+          </div>
+        </section>
+      )}
+
+      {/* Results */}
+      {!loading && data && (
+        <section className="border-t border-[#E5E7EB] py-12">
+          <h2 className="font-serif text-2xl text-[#111111]">
+            Results for “{data.query}”
+          </h2>
+          <p className="mt-1 text-sm text-[#6B7280]">
+            Top 5 organic results per condition, fetched live and independently.
+          </p>
+
+          <div className="mt-6 grid gap-8 md:grid-cols-2">
+            <div>
+              <h3 className="mb-1 text-base font-semibold text-[#111111]">
+                Vanilla Search
+              </h3>
+              <p className="mb-3 text-sm text-[#6B7280]">
+                Authenticity:{" "}
+                <strong className="text-[#111111]">
+                  {data.vanilla.authenticityRate}%
+                </strong>
+              </p>
+              <div className="flex flex-col gap-3">
+                {data.vanilla.results.map((r, i) => (
+                  <ResultCard key={r.url + i} result={r} index={i} />
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-1 text-base font-semibold text-[#111111]">
+                Evasion Search + reddit
+              </h3>
+              <p className="mb-3 text-sm text-[#6B7280]">
+                Authenticity:{" "}
+                <strong className="text-[#111111]">
+                  {data.evasion.authenticityRate}%
+                </strong>
+              </p>
+              <div className="flex flex-col gap-3">
+                {data.evasion.results.map((r, i) => (
+                  <ResultCard key={r.url + i} result={r} index={i} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <ComparisonChart
+              vanillaRate={data.vanilla.authenticityRate}
+              evasionRate={data.evasion.authenticityRate}
+            />
+          </div>
+
+          <p className="mt-6 rounded-md border border-[#E5E7EB] bg-gray-50 px-4 py-3 text-xs leading-relaxed text-[#6B7280]">
+            This tool illustrates the methodology from a 4-query pilot study
+            using live Google results. Each search above is fetched live
+            and independently — results are not part of the original published
+            dataset unless they match one of the 4 example queries.
+          </p>
+        </section>
+      )}
+
+      {/* Footer */}
+      <footer className="border-t border-[#E5E7EB] py-12 text-center">
+        <p className="text-xs leading-relaxed text-[#6B7280]">
+          Stateless demo — searches are fetched fresh via Google (Serper API)
+          and never stored. Rate limited to 1 audit per 10 seconds.
+          <br />
+          The API key lives server-side only (see{" "}
+          <code className="rounded bg-gray-100 px-1">/api/audit</code>); it
+          never appears in client network requests.
+        </p>
       </footer>
-    </div>
+    </main>
   );
 }

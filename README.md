@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Search Quality Pilot Audit — Live Demo Tool
 
-## Getting Started
+Live companion for “Bypassing the Ad Machine.” Type any query → compares a vanilla
+search against the same query + “ reddit”, scored with the paper’s binary rubric.
+100% live Google data (via Serper). No mocks, ever.
 
-First, run the development server:
+Free signup, no credit card: https://serper.dev/signup (2,500 free queries;
+each audit costs 2).
+
+## Stack
+
+Next.js 14 (App Router, TS) · Tailwind CSS · Recharts · Serper (Google SERP API) · Vercel · npm
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd protoype
+npm install
+# put your key from https://serper.dev/signup into .env.local:
+# SERPER_API_KEY=...
+npm run dev   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The key is read only in `app/api/audit/route.ts` (server-side). It never ships to the browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How it works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `POST /api/audit` with `{ "query": "..." }` fires two parallel Google
+  searches (`query` and `query + " reddit"`), takes top 5 organic results each
+  (sponsored-looking entries filtered), classifies via `lib/classify.ts`, returns
+  `{ vanilla: { results, authenticityRate }, evasion: {...} }`.
+- Each search is retried once on transient failure before an honest error is returned.
+- Scoring: user discussion/forums = 1, everything else = 0.
+  `authenticityRate = round(sum / 5 * 100)`.
+- Unclassifiable → `Guide/how-to articles (unclassified)`, score 0, ⚠ needs review flag.
+- Rate limit: 1 request / IP / 10 s (in-memory) → HTTP 429.
+- Failures return `{ error }` and the UI shows it honestly — never fake data.
 
-## Learn More
+## Deploy (Vercel Hobby, free)
 
-To learn more about Next.js, take a look at the following resources:
+1. Push this folder to GitHub.
+2. Import repo in Vercel, add `SERPER_API_KEY` in Environment Variables.
+3. Deploy — auto-builds on push (`npm run build`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Files
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/page.tsx` — UI (search, columns, chart, disclaimer)
+- `app/api/audit/route.ts` — backend + retry + rate limit
+- `lib/serper.ts` — Serper client wrapper + ad filter
+- `lib/classify.ts` — rubric + domain/keyword heuristics
+- `lib/types.ts` — shared types
+- `components/` — SearchForm, ResultCard, ComparisonChart, ExampleQueries, MethodologyNote
